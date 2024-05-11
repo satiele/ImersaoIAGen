@@ -1,0 +1,76 @@
+!pip install --upgrade google.generativeai
+
+import google.generativeai as genai
+
+GOOGLE_API_KEY = "AIzaSyCKwKd8I1zd8LHIgWgRsaKBQoAjxXqrnG0"  # Substitua pela sua chave API
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
+chat = model.start_chat(history=[])
+
+print("Olá! Sou seu assistente de planejamento de viagens. 👋")
+
+# Preferência por viagens nacionais ou internacionais
+tipo_viagem = input("Você prefere sugestões de viagens nacionais ou internacionais? ")
+
+# Coleta de informações da viagem
+dias = int(input("Quantos dias de viagem você planeja? "))
+mes = input("Em qual mês você gostaria de viajar? ")
+pessoas = int(input("Quantas pessoas irão viajar? "))
+orcamento = float(input("Qual o seu orçamento total para a viagem (em R$)? "))
+origem = input("Qual a cidade de origem da viagem? ")
+
+# Pergunta sobre múltiplos destinos
+multiplos_destinos = input("Você gostaria de visitar mais de um destino nesta viagem? (sim/não) ")
+num_destinos = 1  # Valor padrão
+if multiplos_destinos.lower() == "sim":
+    num_destinos = int(input("Quantos destinos você gostaria de incluir no roteiro? "))
+
+# Formatando o prompt para o Gemini (primeira iteração)
+prompt = f"""
+Planeje uma viagem de férias de {dias} dias em {mes} para {pessoas} pessoas com um orçamento de R${orcamento:.2f}.
+O usuário prefere sugestões de viagens {tipo_viagem} e a cidade de origem é {origem}.
+
+O usuário deseja visitar {num_destinos} destinos diferentes durante a viagem.
+
+Crie um roteiro otimizado que inclua:
+
+* **Divisão dos dias:** Distribua os dias de viagem entre os destinos de forma equilibrada, considerando o tempo de deslocamento.
+* **Sugestões de destinos:** Sugira destinos interessantes e viáveis considerando o orçamento, os dias de viagem e a localização de cada destino.
+* **Detalhes de cada destino:**
+    * **Principais pontos turísticos:** Mencione pelo menos 3 pontos turísticos imperdíveis em cada destino.
+    * **O que levar na mala:** Dê dicas de itens essenciais para levar na mala de acordo com o clima e atividades.
+    * **Previsão do tempo:** Inclua uma previsão geral do tempo para o período da viagem em cada destino.
+    * **Orçamento detalhado:**
+        * Estimativa de custos de transporte (passagens aéreas/rodoviárias) considerando a cidade de origem e os deslocamentos entre os destinos.
+        * Estimativa de custos com passeios turísticos em cada destino.
+        * Estimativa de custos com refeições (considerando café da manhã, almoço e jantar) em cada destino.
+        * Estimativa de custos com hospedagem (considerando o número de pessoas) em cada destino.
+
+Apresente o roteiro de forma organizada e fácil de ler, com detalhes sobre cada destino e os custos de cada etapa da viagem.
+"""
+
+generation_config = genai.GenerationConfig()  # Aumenta o limite de tokens
+response = chat.send_message(prompt, generation_config=generation_config)
+print("Resposta:\n", response.text)
+
+# Pergunta se o usuário já conhece alguma das sugestões
+conhece_destinos = input("Você já conhece algum dos destinos sugeridos? (sim/não) ")
+
+while conhece_destinos.lower() == "sim":
+    destinos_descartados = input("Quais destinos você já conhece? Separe-os por vírgula. ").split(",")
+
+    # Prompt atualizado para novas sugestões
+    prompt = f"""
+    O usuário já conhece os seguintes destinos: {", ".join(destinos_descartados)}.
+
+    Sugira um novo roteiro para uma viagem de férias de {dias} dias em {mes} para {pessoas} pessoas com um orçamento de R${orcamento:.2f},
+    considerando a preferência por viagens {tipo_viagem}, a cidade de origem {origem} e a visita a {num_destinos} destinos.
+
+    Mantenha o mesmo formato da resposta anterior, incluindo a divisão dos dias, detalhes sobre cada destino (pontos turísticos, o que levar na mala, previsão do tempo,
+    orçamento detalhado com custos de transporte, passeios, refeições e hospedagem).
+    """
+
+    response = chat.send_message(prompt, generation_config=generation_config)
+    print("Resposta:\n", response.text)
+
+    conhece_destinos = input("Você já conhece algum dos novos destinos sugeridos? (sim/não) ")
